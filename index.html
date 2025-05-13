@@ -8,7 +8,8 @@
     body { font-family: sans-serif; margin: 20px; background: #f8f8f8; }
     h1 { text-align: center; }
     .calendar-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; max-width: 800px; margin: 0 auto 10px auto; }
-    .calendar-nav button { margin: 0 10px; padding: 5px 10px; border: none; background: #ccc; border-radius: 5px; cursor: pointer; }
+    .calendar-nav { display: flex; align-items: center; gap: 10px; }
+    .calendar-nav button { padding: 5px 10px; border: none; background: #ccc; border-radius: 5px; cursor: pointer; }
     .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; max-width: 600px; margin: auto; }
     .day, .header { padding: 10px; background: white; text-align: center; border-radius: 8px; cursor: pointer; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
     .header { font-weight: bold; background: #e0e0e0; cursor: default; }
@@ -26,12 +27,35 @@
     .white { background: #ffffff; border: 1px solid #ccc; }
     .yellow { background: #ffecb3; }
     .warning { color: red; font-size: 14px; font-weight: bold; margin-top: 5px; }
+    .select-month-dropdown select {
+      padding: 6px 12px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      background: #fff;
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
 <h1>ปฏิทินส่วนตัว</h1>
 <div class="calendar-header">
   <div class="calendar-nav">
+    <div class="select-month-dropdown">
+      <select id="month-selector" onchange="selectMonth(event)">
+        <option value="0">มกราคม</option>
+        <option value="1">กุมภาพันธ์</option>
+        <option value="2">มีนาคม</option>
+        <option value="3">เมษายน</option>
+        <option value="4">พฤษภาคม</option>
+        <option value="5">มิถุนายน</option>
+        <option value="6">กรกฎาคม</option>
+        <option value="7">สิงหาคม</option>
+        <option value="8">กันยายน</option>
+        <option value="9">ตุลาคม</option>
+        <option value="10">พฤศจิกายน</option>
+        <option value="11">ธันวาคม</option>
+      </select>
+    </div>
     <button onclick="changeMonth(-1)">◀️ เดือนก่อน</button>
     <span id="current-month"></span>
     <button onclick="changeMonth(1)">เดือนถัดไป ▶️</button>
@@ -74,6 +98,9 @@ function renderCalendar(date) {
 
   calendarEl.innerHTML = '';
   currentMonthLabel.innerText = `${monthNames[month]} ${year}`;
+
+  const monthSelector = document.getElementById('month-selector');
+  if (monthSelector) monthSelector.value = month;
 
   for (let d of days) {
     let cell = document.createElement('div');
@@ -139,6 +166,12 @@ function changeMonth(offset) {
   renderCalendar(viewDate);
 }
 
+function selectMonth(event) {
+  const monthIndex = parseInt(event.target.value);
+  viewDate.setMonth(monthIndex);
+  renderCalendar(viewDate);
+}
+
 function renderAllNotes(year, month) {
   notesListEl.innerHTML = '';
   const entries = [];
@@ -162,4 +195,3 @@ renderCalendar(viewDate);
 </script>
 </body>
 </html>
-
