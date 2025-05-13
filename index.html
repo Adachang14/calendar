@@ -1,1 +1,165 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ปฏิทินส่วนตัว</title>
+  <style>
+    body { font-family: sans-serif; margin: 20px; background: #f8f8f8; }
+    h1 { text-align: center; }
+    .calendar-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; max-width: 800px; margin: 0 auto 10px auto; }
+    .calendar-nav button { margin: 0 10px; padding: 5px 10px; border: none; background: #ccc; border-radius: 5px; cursor: pointer; }
+    .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; max-width: 600px; margin: auto; }
+    .day, .header { padding: 10px; background: white; text-align: center; border-radius: 8px; cursor: pointer; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
+    .header { font-weight: bold; background: #e0e0e0; cursor: default; }
+    .today { background: #ffecb3 !important; }
+    .selected { background: #ffcccc !important; }
+    .note-box { margin-top: 10px; }
+    .note-input { width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; margin-top: 5px; }
+    .all-notes { max-width: 600px; margin: 30px auto; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.05); }
+    .all-notes h3 { margin-top: 0; }
+    .note-entry { margin-bottom: 10px; }
+    .legend { font-size: 14px; margin-right: 20px; text-align: right; }
+    .legend div { margin: 2px 0; }
+    .legend span { display: inline-block; width: 16px; height: 16px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
+    .red { background: #ffcccc; }
+    .white { background: #ffffff; border: 1px solid #ccc; }
+    .yellow { background: #ffecb3; }
+    .warning { color: red; font-size: 14px; font-weight: bold; margin-top: 5px; }
+  </style>
+</head>
+<body>
+<h1>ปฏิทินส่วนตัว</h1>
+<div class="calendar-header">
+  <div class="calendar-nav">
+    <button onclick="changeMonth(-1)">◀️ เดือนก่อน</button>
+    <span id="current-month"></span>
+    <button onclick="changeMonth(1)">เดือนถัดไป ▶️</button>
+  </div>
+  <div class="legend">
+    <div><span class="red"></span>สีแดง = วันที่ใช้ใบเก่า</div>
+    <div><span class="white"></span>สีขาว = วันที่ทำเองขึ้นมาใหม่</div>
+    <div><span class="yellow"></span>สีเหลือง = วันปัจจุบัน</div>
+    <div class="warning">13 เมษายน ถึง 6 พฤษภาคม 2568/2025 ห้ามนำมาใช้ซ้ำ</div>
+  </div>
+</div>
+<div id="calendar" class="calendar"></div>
+<div class="note-box" style="max-width:600px;margin:auto;display:none;">
+  <h3 id="note-date"></h3>
+  <textarea id="note-input" class="note-input" rows="4" placeholder="พิมพ์บันทึกตรงนี้..."></textarea>
+</div>
+<div class="all-notes" id="all-notes">
+  <h3>โน๊ตทั้งหมดของเดือนนี้</h3>
+  <div id="notes-list"></div>
+</div>
+
+<script>
+const calendarEl = document.getElementById('calendar');
+const noteBox = document.querySelector('.note-box');
+noteDate = document.getElementById('note-date');
+noteInput = document.getElementById('note-input');
+const currentMonthLabel = document.getElementById('current-month');
+const notesListEl = document.getElementById('notes-list');
+let selectedDate = '';
+
+const monthNames = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const days = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+
+let viewDate = new Date();
+
+function renderCalendar(date) {
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const today = new Date();
+
+  calendarEl.innerHTML = '';
+  currentMonthLabel.innerText = `${monthNames[month]} ${year}`;
+
+  for (let d of days) {
+    let cell = document.createElement('div');
+    cell.className = 'header';
+    cell.innerText = d;
+    calendarEl.appendChild(cell);
+  }
+
+  const firstDay = new Date(year, month, 1);
+  const lastDate = new Date(year, month + 1, 0).getDate();
+  const startDay = firstDay.getDay();
+
+  for (let i = 0; i < startDay; i++) {
+    let blank = document.createElement('div');
+    calendarEl.appendChild(blank);
+  }
+
+  for (let d = 1; d <= lastDate; d++) {
+    let cell = document.createElement('div');
+    cell.className = 'day';
+    if (d === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
+      cell.classList.add('today');
+    }
+
+    const key = `${year}-${month + 1}-${d}`;
+    if (localStorage.getItem(key + '-selected')) {
+      cell.classList.add('selected');
+    }
+
+    cell.innerText = d;
+    cell.onclick = () => {
+      cell.classList.toggle('selected');
+      if (cell.classList.contains('selected')) {
+        localStorage.setItem(key + '-selected', true);
+      } else {
+        localStorage.removeItem(key + '-selected');
+      }
+      openNote(year, month, d);
+    };
+    calendarEl.appendChild(cell);
+  }
+
+  renderAllNotes(year, month);
+}
+
+function openNote(y, m, d) {
+  selectedDate = `${y}-${m + 1}-${d}`;
+  noteBox.style.display = 'block';
+  noteDate.innerText = `บันทึกวันที่ ${d} ${monthNames[m]} ${y}`;
+  noteInput.value = localStorage.getItem(selectedDate) || '';
+}
+
+noteInput.addEventListener('input', () => {
+  if (selectedDate) {
+    localStorage.setItem(selectedDate, noteInput.value);
+    const parts = selectedDate.split('-');
+    renderAllNotes(parseInt(parts[0]), parseInt(parts[1]) - 1);
+  }
+});
+
+function changeMonth(offset) {
+  viewDate.setMonth(viewDate.getMonth() + offset);
+  renderCalendar(viewDate);
+}
+
+function renderAllNotes(year, month) {
+  notesListEl.innerHTML = '';
+  const entries = [];
+  for (let i = 1; i <= 31; i++) {
+    const key = `${year}-${month + 1}-${i}`;
+    const note = localStorage.getItem(key);
+    if (note && note.trim() !== '') {
+      entries.push({ day: i, text: note });
+    }
+  }
+  entries.sort((a, b) => a.day - b.day);
+  for (let entry of entries) {
+    const div = document.createElement('div');
+    div.className = 'note-entry';
+    div.innerText = `วันที่ ${entry.day}  ${entry.text}`;
+    notesListEl.appendChild(div);
+  }
+}
+
+renderCalendar(viewDate);
+</script>
+</body>
+</html>
 
