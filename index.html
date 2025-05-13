@@ -20,14 +20,14 @@
     .all-notes { max-width: 600px; margin: 30px auto; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.05); }
     .all-notes h3 { margin-top: 0; }
     .note-entry { margin-bottom: 10px; }
-    .legend { font-size: 14px; margin-right: 20px; text-align: right; }
+    .legend { font-size: 14px; text-align: right; margin-right: 20px; }
     .legend div { margin: 2px 0; }
     .legend span { display: inline-block; width: 16px; height: 16px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
     .red { background: #ffcccc; }
     .white { background: #ffffff; border: 1px solid #ccc; }
     .yellow { background: #ffecb3; }
     .warning { color: red; font-size: 14px; font-weight: bold; margin-top: 5px; }
-    .select-month-dropdown select {
+    .select-dropdown select {
       padding: 6px 12px;
       border-radius: 5px;
       border: 1px solid #ccc;
@@ -40,7 +40,7 @@
 <h1>ปฏิทินส่วนตัว</h1>
 <div class="calendar-header">
   <div class="calendar-nav">
-    <div class="select-month-dropdown">
+    <div class="select-dropdown">
       <select id="month-selector" onchange="selectMonth(event)">
         <option value="0">มกราคม</option>
         <option value="1">กุมภาพันธ์</option>
@@ -56,15 +56,17 @@
         <option value="11">ธันวาคม</option>
       </select>
     </div>
+    <div class="select-dropdown">
+      <select id="year-selector" onchange="selectYear(event)">
+        <option value="2025">2568</option>
+        <option value="2024">2567</option>
+        <option value="2023">2566</option>
+        <!-- สามารถเพิ่มปีอื่น ๆ ตามที่ต้องการ -->
+      </select>
+    </div>
     <button onclick="changeMonth(-1)">◀️ เดือนก่อน</button>
     <span id="current-month"></span>
     <button onclick="changeMonth(1)">เดือนถัดไป ▶️</button>
-  </div>
-  <div class="legend">
-    <div><span class="red"></span>สีแดง = วันที่ใช้ใบเก่า</div>
-    <div><span class="white"></span>สีขาว = วันที่ทำเองขึ้นมาใหม่</div>
-    <div><span class="yellow"></span>สีเหลือง = วันปัจจุบัน</div>
-    <div class="warning">13 เมษายน ถึง 6 พฤษภาคม 2568/2025 ห้ามนำมาใช้ซ้ำ</div>
   </div>
 </div>
 <div id="calendar" class="calendar"></div>
@@ -77,11 +79,18 @@
   <div id="notes-list"></div>
 </div>
 
+<div class="legend">
+  <div><span class="red"></span>สีแดง = วันที่ใช้ใบเก่า</div>
+  <div><span class="white"></span>สีขาว = วันที่ทำเองขึ้นมาใหม่</div>
+  <div><span class="yellow"></span>สีเหลือง = วันปัจจุบัน</div>
+  <div class="warning">13 เมษายน ถึง 6 พฤษภาคม 2568/2025 ห้ามนำมาใช้ซ้ำ</div>
+</div>
+
 <script>
 const calendarEl = document.getElementById('calendar');
 const noteBox = document.querySelector('.note-box');
-noteDate = document.getElementById('note-date');
-noteInput = document.getElementById('note-input');
+const noteDate = document.getElementById('note-date');
+const noteInput = document.getElementById('note-input');
 const currentMonthLabel = document.getElementById('current-month');
 const notesListEl = document.getElementById('notes-list');
 let selectedDate = '';
@@ -169,6 +178,12 @@ function changeMonth(offset) {
 function selectMonth(event) {
   const monthIndex = parseInt(event.target.value);
   viewDate.setMonth(monthIndex);
+  renderCalendar(viewDate);
+}
+
+function selectYear(event) {
+  const year = parseInt(event.target.value);
+  viewDate.setFullYear(year);
   renderCalendar(viewDate);
 }
 
