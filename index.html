@@ -34,6 +34,13 @@
       background: #fff;
       font-size: 14px;
     }
+    .legend-container {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      text-align: right;
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
@@ -58,10 +65,13 @@
     </div>
     <div class="select-dropdown">
       <select id="year-selector" onchange="selectYear(event)">
-        <option value="2025">2568</option>
-        <option value="2024">2567</option>
-        <option value="2023">2566</option>
-        <!-- สามารถเพิ่มปีอื่น ๆ ตามที่ต้องการ -->
+        <option value="2568">2568</option>
+        <option value="2569">2569</option>
+        <option value="2570">2570</option>
+        <option value="2571">2571</option>
+        <option value="2572">2572</option>
+        <option value="2573">2573</option>
+        <option value="2574">2574</option>
       </select>
     </div>
     <button onclick="changeMonth(-1)">◀️ เดือนก่อน</button>
@@ -79,11 +89,11 @@
   <div id="notes-list"></div>
 </div>
 
-<div class="legend">
+<div class="legend-container">
   <div><span class="red"></span>สีแดง = วันที่ใช้ใบเก่า</div>
   <div><span class="white"></span>สีขาว = วันที่ทำเองขึ้นมาใหม่</div>
   <div><span class="yellow"></span>สีเหลือง = วันปัจจุบัน</div>
-  <div class="warning">13 เมษายน ถึง 6 พฤษภาคม 2568/2025 ห้ามนำมาใช้ซ้ำ</div>
+  <div class="warning">13 เมษา ถึง 6 พฤษภา 68 ใช้ไม่ได้</div>
 </div>
 
 <script>
