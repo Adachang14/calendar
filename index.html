@@ -119,7 +119,10 @@ function renderCalendar(date) {
   currentMonthLabel.innerText = `${monthNames[month]} ${year}`;
 
   const monthSelector = document.getElementById('month-selector');
+  const yearSelector = document.getElementById('year-selector');
+
   if (monthSelector) monthSelector.value = month;
+  if (yearSelector) yearSelector.value = year;
 
   for (let d of days) {
     let cell = document.createElement('div');
@@ -182,18 +185,21 @@ noteInput.addEventListener('input', () => {
 
 function changeMonth(offset) {
   viewDate.setMonth(viewDate.getMonth() + offset);
+  localStorage.setItem('viewDate', viewDate.toISOString()); // Save the current month and year to localStorage
   renderCalendar(viewDate);
 }
 
 function selectMonth(event) {
   const monthIndex = parseInt(event.target.value);
   viewDate.setMonth(monthIndex);
+  localStorage.setItem('viewDate', viewDate.toISOString()); // Save the selected month and year
   renderCalendar(viewDate);
 }
 
 function selectYear(event) {
   const year = parseInt(event.target.value);
   viewDate.setFullYear(year);
+  localStorage.setItem('viewDate', viewDate.toISOString()); // Save the selected year
   renderCalendar(viewDate);
 }
 
@@ -214,6 +220,14 @@ function renderAllNotes(year, month) {
     div.innerText = `วันที่ ${entry.day}  ${entry.text}`;
     notesListEl.appendChild(div);
   }
+}
+
+// Check if we have a saved date in localStorage
+const savedViewDate = localStorage.getItem('viewDate');
+if (savedViewDate) {
+  viewDate = new Date(savedViewDate);
+} else {
+  viewDate = new Date(); // Default to today's date if no saved date
 }
 
 renderCalendar(viewDate);
