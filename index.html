@@ -20,7 +20,13 @@
     .all-notes { max-width: 600px; margin: 30px auto; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.05); }
     .all-notes h3 { margin-top: 0; }
     .note-entry { margin-bottom: 10px; }
-    .legend { font-size: 14px; text-align: right; margin-right: 20px; }
+    .legend-container {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      text-align: right;
+      font-size: 14px;
+    }
     .legend div { margin: 2px 0; }
     .legend span { display: inline-block; width: 16px; height: 16px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
     .red { background: #ffcccc; }
@@ -32,13 +38,6 @@
       border-radius: 5px;
       border: 1px solid #ccc;
       background: #fff;
-      font-size: 14px;
-    }
-    .legend-container {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      text-align: right;
       font-size: 14px;
     }
   </style>
@@ -88,7 +87,6 @@
   <h3>โน๊ตทั้งหมดของเดือนนี้</h3>
   <div id="notes-list"></div>
 </div>
-
 <div class="legend-container">
   <div><span class="red"></span>สีแดง = วันที่ใช้ใบเก่า</div>
   <div><span class="white"></span>สีขาว = วันที่ทำเองขึ้นมาใหม่</div>
@@ -111,18 +109,19 @@ const days = ['อา','จ','อ','พ','พฤ','ศ','ส'];
 let viewDate = new Date();
 
 function renderCalendar(date) {
-  const year = date.getFullYear();
+  const yearCE = date.getFullYear();
+  const yearBE = yearCE + 543;
   const month = date.getMonth();
   const today = new Date();
 
   calendarEl.innerHTML = '';
-  currentMonthLabel.innerText = `${monthNames[month]} ${year}`;
+  currentMonthLabel.innerText = `${monthNames[month]} ${yearBE}`;
 
   const monthSelector = document.getElementById('month-selector');
   const yearSelector = document.getElementById('year-selector');
 
   if (monthSelector) monthSelector.value = month;
-  if (yearSelector) yearSelector.value = year;
+  if (yearSelector) yearSelector.value = yearBE;
 
   for (let d of days) {
     let cell = document.createElement('div');
@@ -131,8 +130,8 @@ function renderCalendar(date) {
     calendarEl.appendChild(cell);
   }
 
-  const firstDay = new Date(year, month, 1);
-  const lastDate = new Date(year, month + 1, 0).getDate();
+  const firstDay = new Date(yearCE, month, 1);
+  const lastDate = new Date(yearCE, month + 1, 0).getDate();
   const startDay = firstDay.getDay();
 
   for (let i = 0; i < startDay; i++) {
@@ -143,11 +142,11 @@ function renderCalendar(date) {
   for (let d = 1; d <= lastDate; d++) {
     let cell = document.createElement('div');
     cell.className = 'day';
-    if (d === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
+    if (d === today.getDate() && month === today.getMonth() && yearCE === today.getFullYear()) {
       cell.classList.add('today');
     }
 
-    const key = `${year}-${month + 1}-${d}`;
+    const key = `${yearBE}-${month + 1}-${d}`;
     if (localStorage.getItem(key + '-selected')) {
       cell.classList.add('selected');
     }
@@ -160,12 +159,12 @@ function renderCalendar(date) {
       } else {
         localStorage.removeItem(key + '-selected');
       }
-      openNote(year, month, d);
+      openNote(yearBE, month, d);
     };
     calendarEl.appendChild(cell);
   }
 
-  renderAllNotes(year, month);
+  renderAllNotes(yearBE, month);
 }
 
 function openNote(y, m, d) {
@@ -185,29 +184,30 @@ noteInput.addEventListener('input', () => {
 
 function changeMonth(offset) {
   viewDate.setMonth(viewDate.getMonth() + offset);
-  localStorage.setItem('viewDate', viewDate.toISOString()); // Save the current month and year to localStorage
+  localStorage.setItem('viewDate', viewDate.toISOString());
   renderCalendar(viewDate);
 }
 
 function selectMonth(event) {
   const monthIndex = parseInt(event.target.value);
   viewDate.setMonth(monthIndex);
-  localStorage.setItem('viewDate', viewDate.toISOString()); // Save the selected month and year
+  localStorage.setItem('viewDate', viewDate.toISOString());
   renderCalendar(viewDate);
 }
 
 function selectYear(event) {
-  const year = parseInt(event.target.value);
-  viewDate.setFullYear(year);
-  localStorage.setItem('viewDate', viewDate.toISOString()); // Save the selected year
+  const yearBE = parseInt(event.target.value);
+  const yearCE = yearBE - 543;
+  viewDate.setFullYear(yearCE);
+  localStorage.setItem('viewDate', viewDate.toISOString());
   renderCalendar(viewDate);
 }
 
-function renderAllNotes(year, month) {
+function renderAllNotes(yearBE, month) {
   notesListEl.innerHTML = '';
   const entries = [];
   for (let i = 1; i <= 31; i++) {
-    const key = `${year}-${month + 1}-${i}`;
+    const key = `${yearBE}-${month + 1}-${i}`;
     const note = localStorage.getItem(key);
     if (note && note.trim() !== '') {
       entries.push({ day: i, text: note });
@@ -222,12 +222,11 @@ function renderAllNotes(year, month) {
   }
 }
 
-// Check if we have a saved date in localStorage
 const savedViewDate = localStorage.getItem('viewDate');
 if (savedViewDate) {
   viewDate = new Date(savedViewDate);
 } else {
-  viewDate = new Date(); // Default to today's date if no saved date
+  viewDate = new Date();
 }
 
 renderCalendar(viewDate);
