@@ -21,7 +21,6 @@
     .all-notes h3 { margin-top: 0; }
     .note-entry { margin-bottom: 10px; }
     .legend { font-size: 14px; text-align: right; margin-right: 20px; }
-    .legend div { margin: 2px 0; }
     .legend span { display: inline-block; width: 16px; height: 16px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
     .red { background: #ffcccc; }
     .white { background: #ffffff; border: 1px solid #ccc; }
@@ -180,26 +179,41 @@ noteInput.addEventListener('input', () => {
     localStorage.setItem(selectedDate, noteInput.value);
     const parts = selectedDate.split('-');
     renderAllNotes(parseInt(parts[0]), parseInt(parts[1]) - 1);
+
+    // 🎯 ส่งข้อมูลไป Google Sheets
+    fetch('https://script.google.com/macros/s/AKfycbzRMtscDTUEcVGCOje4-eGJ52hjKMzblo8ijsDJ4vsMHhduw0DV7r1o4WuiZE-aHEE1/exec', {
+      method: 'POST',
+      body: JSON.stringify({
+        date: selectedDate,
+        note: noteInput.value
+      }),
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    .then(res => res.text())
+    .then(data => console.log('บันทึกเรียบร้อย:', data))
+    .catch(err => console.error('ส่งข้อมูลล้มเหลว:', err));
   }
 });
 
 function changeMonth(offset) {
   viewDate.setMonth(viewDate.getMonth() + offset);
-  localStorage.setItem('viewDate', viewDate.toISOString()); // Save the current month and year to localStorage
+  localStorage.setItem('viewDate', viewDate.toISOString());
   renderCalendar(viewDate);
 }
 
 function selectMonth(event) {
   const monthIndex = parseInt(event.target.value);
   viewDate.setMonth(monthIndex);
-  localStorage.setItem('viewDate', viewDate.toISOString()); // Save the selected month and year
+  localStorage.setItem('viewDate', viewDate.toISOString());
   renderCalendar(viewDate);
 }
 
 function selectYear(event) {
   const year = parseInt(event.target.value);
   viewDate.setFullYear(year);
-  localStorage.setItem('viewDate', viewDate.toISOString()); // Save the selected year
+  localStorage.setItem('viewDate', viewDate.toISOString());
   renderCalendar(viewDate);
 }
 
@@ -222,12 +236,11 @@ function renderAllNotes(year, month) {
   }
 }
 
-// Check if we have a saved date in localStorage
 const savedViewDate = localStorage.getItem('viewDate');
 if (savedViewDate) {
   viewDate = new Date(savedViewDate);
 } else {
-  viewDate = new Date(); // Default to today's date if no saved date
+  viewDate = new Date();
 }
 
 renderCalendar(viewDate);
