@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ปฏิทินส่วนตัว</title>
+  <title>ปฏิทินออนไลน์ของฉัน</title>
   <style>
     body { font-family: sans-serif; margin: 20px; background: #f8f8f8; }
     h1 { text-align: center; }
@@ -19,31 +19,26 @@
     .note-input { width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; margin-top: 5px; }
     .all-notes { max-width: 600px; margin: 30px auto; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.05); }
     .all-notes h3 { margin-top: 0; }
-    .note-entry { margin-bottom: 10px; }
-    .legend-container {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      text-align: right;
-      font-size: 14px;
-    }
+    .note-entry { margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+    .legend-container { position: absolute; top: 10px; right: 10px; text-align: right; font-size: 14px; }
     .legend div { margin: 2px 0; }
     .legend span { display: inline-block; width: 16px; height: 16px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
     .red { background: #ffcccc; }
     .white { background: #ffffff; border: 1px solid #ccc; }
     .yellow { background: #ffecb3; }
     .warning { color: red; font-size: 14px; font-weight: bold; margin-top: 5px; }
-    .select-dropdown select {
-      padding: 6px 12px;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-      background: #fff;
-      font-size: 14px;
-    }
+    .select-dropdown select { padding: 6px 12px; border-radius: 5px; border: 1px solid #ccc; background: #fff; font-size: 14px; }
+    /* ปุ่มพิเศษสำหรับย้ายข้อมูล */
+    #sync-btn { display: block; margin: 10px auto; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+    #sync-btn:hover { background: #0056b3; }
   </style>
 </head>
 <body>
-<h1>ปฏิทินส่วนตัว</h1>
+
+<h1>ปฏิทินส่วนตัว (Online Sync)</h1>
+
+<button id="sync-btn" onclick="migrateData()">🔄 Sync ข้อมูลเก่าจากเครื่องนี้ขึ้น Cloud</button>
+
 <div class="calendar-header">
   <div class="calendar-nav">
     <div class="select-dropdown">
@@ -70,7 +65,6 @@
         <option value="2571">2571</option>
         <option value="2572">2572</option>
         <option value="2573">2573</option>
-        <option value="2574">2574</option>
       </select>
     </div>
     <button onclick="changeMonth(-1)">◀️ เดือนก่อน</button>
@@ -78,15 +72,19 @@
     <button onclick="changeMonth(1)">เดือนถัดไป ▶️</button>
   </div>
 </div>
+
 <div id="calendar" class="calendar"></div>
+
 <div class="note-box" style="max-width:600px;margin:auto;display:none;">
   <h3 id="note-date"></h3>
   <textarea id="note-input" class="note-input" rows="4" placeholder="พิมพ์บันทึกตรงนี้..."></textarea>
 </div>
+
 <div class="all-notes" id="all-notes">
   <h3>โน๊ตทั้งหมดของเดือนนี้</h3>
   <div id="notes-list"></div>
 </div>
+
 <div class="legend-container">
   <div><span class="red"></span>สีแดง = วันที่ใช้ใบเก่า</div>
   <div><span class="white"></span>สีขาว = วันที่ทำเองขึ้นมาใหม่</div>
@@ -94,142 +92,164 @@
   <div class="warning">13 เมษา ถึง 6 พฤษภา 68 ใช้ไม่ได้</div>
 </div>
 
-<script>
-const calendarEl = document.getElementById('calendar');
-const noteBox = document.querySelector('.note-box');
-const noteDate = document.getElementById('note-date');
-const noteInput = document.getElementById('note-input');
-const currentMonthLabel = document.getElementById('current-month');
-const notesListEl = document.getElementById('notes-list');
-let selectedDate = '';
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getDatabase, ref, set, onValue, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-const monthNames = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-const days = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+  const firebaseConfig = {
+    apiKey: "AIzaSyBgYM7DIII0K7McYcqD9pvkdAbsWRcAc5A",
+    authDomain: "calendar-8e62f.firebaseapp.com",
+    databaseURL: "https://calendar-8e62f-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "calendar-8e62f",
+    storageBucket: "calendar-8e62f.firebasestorage.app",
+    messagingSenderId: "257469845582",
+    appId: "1:257469845582:web:3acad4d40611e6a711f31f"
+  };
 
-let viewDate = new Date();
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
 
-function renderCalendar(date) {
-  const yearCE = date.getFullYear();
-  const yearBE = yearCE + 543;
-  const month = date.getMonth();
-  const today = new Date();
+  // ตัวแปรเก็บข้อมูลจาก Cloud
+  let cloudData = {};
 
-  calendarEl.innerHTML = '';
-  currentMonthLabel.innerText = `${monthNames[month]} ${yearBE}`;
+  const calendarEl = document.getElementById('calendar');
+  const noteBox = document.querySelector('.note-box');
+  const noteDate = document.getElementById('note-date');
+  const noteInput = document.getElementById('note-input');
+  const currentMonthLabel = document.getElementById('current-month');
+  const notesListEl = document.getElementById('notes-list');
+  let selectedDateKey = '';
+  let viewDate = new Date();
 
-  const monthSelector = document.getElementById('month-selector');
-  const yearSelector = document.getElementById('year-selector');
+  const monthNames = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  const days = ['อา','จ','อ','พ','พฤ','ศ','ส'];
 
-  if (monthSelector) monthSelector.value = month;
-  if (yearSelector) yearSelector.value = yearBE;
+  // ฟังก์ชันดึงข้อมูลจาก Cloud ตลอดเวลา
+  onValue(ref(db, 'calendar_data/'), (snapshot) => {
+    cloudData = snapshot.val() || {};
+    renderCalendar(viewDate);
+  });
 
-  for (let d of days) {
-    let cell = document.createElement('div');
-    cell.className = 'header';
-    cell.innerText = d;
-    calendarEl.appendChild(cell);
-  }
+  window.renderCalendar = function(date) {
+    const yearCE = date.getFullYear();
+    const yearBE = yearCE + 543;
+    const month = date.getMonth();
+    const today = new Date();
 
-  const firstDay = new Date(yearCE, month, 1);
-  const lastDate = new Date(yearCE, month + 1, 0).getDate();
-  const startDay = firstDay.getDay();
+    calendarEl.innerHTML = '';
+    currentMonthLabel.innerText = `${monthNames[month]} ${yearBE}`;
+    
+    document.getElementById('month-selector').value = month;
+    document.getElementById('year-selector').value = yearBE;
 
-  for (let i = 0; i < startDay; i++) {
-    let blank = document.createElement('div');
-    calendarEl.appendChild(blank);
-  }
-
-  for (let d = 1; d <= lastDate; d++) {
-    let cell = document.createElement('div');
-    cell.className = 'day';
-    if (d === today.getDate() && month === today.getMonth() && yearCE === today.getFullYear()) {
-      cell.classList.add('today');
+    for (let d of days) {
+      let cell = document.createElement('div');
+      cell.className = 'header';
+      cell.innerText = d;
+      calendarEl.appendChild(cell);
     }
 
-    const key = `${yearBE}-${month + 1}-${d}`;
-    if (localStorage.getItem(key + '-selected')) {
-      cell.classList.add('selected');
+    const firstDay = new Date(yearCE, month, 1).getDay();
+    const lastDate = new Date(yearCE, month + 1, 0).getDate();
+
+    for (let i = 0; i < firstDay; i++) {
+      calendarEl.appendChild(document.createElement('div'));
     }
 
-    cell.innerText = d;
-    cell.onclick = () => {
-      cell.classList.toggle('selected');
-      if (cell.classList.contains('selected')) {
-        localStorage.setItem(key + '-selected', true);
-      } else {
-        localStorage.removeItem(key + '-selected');
+    for (let d = 1; d <= lastDate; d++) {
+      let cell = document.createElement('div');
+      cell.className = 'day';
+      const key = `${yearBE}-${month + 1}-${d}`;
+      
+      if (d === today.getDate() && month === today.getMonth() && yearCE === today.getFullYear()) {
+        cell.classList.add('today');
       }
-      openNote(yearBE, month, d);
-    };
-    calendarEl.appendChild(cell);
-  }
 
-  renderAllNotes(yearBE, month);
-}
+      if (cloudData[key] && cloudData[key].selected) {
+        cell.classList.add('selected');
+      }
 
-function openNote(y, m, d) {
-  selectedDate = `${y}-${m + 1}-${d}`;
-  noteBox.style.display = 'block';
-  noteDate.innerText = `บันทึกวันที่ ${d} ${monthNames[m]} ${y}`;
-  noteInput.value = localStorage.getItem(selectedDate) || '';
-}
-
-noteInput.addEventListener('input', () => {
-  if (selectedDate) {
-    localStorage.setItem(selectedDate, noteInput.value);
-    const parts = selectedDate.split('-');
-    renderAllNotes(parseInt(parts[0]), parseInt(parts[1]) - 1);
-  }
-});
-
-function changeMonth(offset) {
-  viewDate.setMonth(viewDate.getMonth() + offset);
-  localStorage.setItem('viewDate', viewDate.toISOString());
-  renderCalendar(viewDate);
-}
-
-function selectMonth(event) {
-  const monthIndex = parseInt(event.target.value);
-  viewDate.setMonth(monthIndex);
-  localStorage.setItem('viewDate', viewDate.toISOString());
-  renderCalendar(viewDate);
-}
-
-function selectYear(event) {
-  const yearBE = parseInt(event.target.value);
-  const yearCE = yearBE - 543;
-  viewDate.setFullYear(yearCE);
-  localStorage.setItem('viewDate', viewDate.toISOString());
-  renderCalendar(viewDate);
-}
-
-function renderAllNotes(yearBE, month) {
-  notesListEl.innerHTML = '';
-  const entries = [];
-  for (let i = 1; i <= 31; i++) {
-    const key = `${yearBE}-${month + 1}-${i}`;
-    const note = localStorage.getItem(key);
-    if (note && note.trim() !== '') {
-      entries.push({ day: i, text: note });
+      cell.innerText = d;
+      cell.onclick = () => {
+        const isSelected = !cell.classList.contains('selected');
+        update(ref(db, 'calendar_data/' + key), { selected: isSelected });
+        openNote(yearBE, month, d);
+      };
+      calendarEl.appendChild(cell);
     }
+    renderAllNotes(yearBE, month);
   }
-  entries.sort((a, b) => a.day - b.day);
-  for (let entry of entries) {
-    const div = document.createElement('div');
-    div.className = 'note-entry';
-    div.innerText = `วันที่ ${entry.day}  ${entry.text}`;
-    notesListEl.appendChild(div);
+
+  window.openNote = function(y, m, d) {
+    selectedDateKey = `${y}-${m + 1}-${d}`;
+    noteBox.style.display = 'block';
+    noteDate.innerText = `บันทึกวันที่ ${d} ${monthNames[m]} ${y}`;
+    noteInput.value = (cloudData[selectedDateKey] && cloudData[selectedDateKey].note) ? cloudData[selectedDateKey].note : '';
   }
-}
 
-const savedViewDate = localStorage.getItem('viewDate');
-if (savedViewDate) {
-  viewDate = new Date(savedViewDate);
-} else {
-  viewDate = new Date();
-}
+  noteInput.oninput = () => {
+    if (selectedDateKey) {
+      update(ref(db, 'calendar_data/' + selectedDateKey), { note: noteInput.value });
+    }
+  };
 
-renderCalendar(viewDate);
+  window.changeMonth = (offset) => {
+    viewDate.setMonth(viewDate.getMonth() + offset);
+    renderCalendar(viewDate);
+  };
+
+  window.selectMonth = (e) => {
+    viewDate.setMonth(parseInt(e.target.value));
+    renderCalendar(viewDate);
+  };
+
+  window.selectYear = (e) => {
+    viewDate.setFullYear(parseInt(e.target.value) - 543);
+    renderCalendar(viewDate);
+  };
+
+  function renderAllNotes(yearBE, month) {
+    notesListEl.innerHTML = '';
+    const entries = [];
+    for (let d = 1; d <= 31; d++) {
+      const key = `${yearBE}-${month + 1}-${d}`;
+      if (cloudData[key] && cloudData[key].note) {
+        entries.push({ day: d, text: cloudData[key].note });
+      }
+    }
+    entries.forEach(entry => {
+      const div = document.createElement('div');
+      div.className = 'note-entry';
+      div.innerText = `วันที่ ${entry.day}: ${entry.text}`;
+      notesListEl.appendChild(div);
+    });
+  }
+
+  // ฟังก์ชันย้ายข้อมูลจาก LocalStorage ขึ้น Cloud (ใช้ครั้งเดียว)
+  window.migrateData = async function() {
+    if (!confirm("ต้องการย้ายข้อมูล 6-7 เดือนจากเครื่องนี้ขึ้น Cloud ใช่ไหม?")) return;
+    
+    let count = 0;
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      const value = localStorage.getItem(key);
+      
+      // ตรวจสอบว่าชื่อ Key เป็นวันที่ (เช่น 2568-1-1) หรือไม่
+      if (key.match(/^\d{4}-\d{1,2}-\d{1,2}$/)) {
+        await update(ref(db, 'calendar_data/' + key), { note: value });
+        count++;
+      }
+      // ตรวจสอบสถานะสีแดง
+      if (key.endsWith('-selected')) {
+        const realKey = key.replace('-selected', '');
+        await update(ref(db, 'calendar_data/' + realKey), { selected: true });
+        count++;
+      }
+    }
+    alert(`ย้ายข้อมูลเสร็จสิ้นทั้งหมด ${count} รายการ! ตอนนี้เปิดดูในเครื่องอื่นได้เลยครับ`);
+    document.getElementById('sync-btn').style.display = 'none';
+  };
+
 </script>
 </body>
 </html>
