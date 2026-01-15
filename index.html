@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ปฏิทินออนไลน์ของฉัน</title>
+  <title>ปฏิทินส่วนตัวออนไลน์</title>
   <style>
     body { font-family: sans-serif; margin: 20px; background: #f8f8f8; }
     h1 { text-align: center; }
@@ -28,16 +28,11 @@
     .yellow { background: #ffecb3; }
     .warning { color: red; font-size: 14px; font-weight: bold; margin-top: 5px; }
     .select-dropdown select { padding: 6px 12px; border-radius: 5px; border: 1px solid #ccc; background: #fff; font-size: 14px; }
-    /* ปุ่มพิเศษสำหรับย้ายข้อมูล */
-    #sync-btn { display: block; margin: 10px auto; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
-    #sync-btn:hover { background: #0056b3; }
   </style>
 </head>
 <body>
 
-<h1>ปฏิทินส่วนตัว (Online Sync)</h1>
-
-<button id="sync-btn" onclick="migrateData()">🔄 Sync ข้อมูลเก่าจากเครื่องนี้ขึ้น Cloud</button>
+<h1>ปฏิทินส่วนตัว</h1>
 
 <div class="calendar-header">
   <div class="calendar-nav">
@@ -94,7 +89,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import { getDatabase, ref, set, onValue, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+  import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBgYM7DIII0K7McYcqD9pvkdAbsWRcAc5A",
@@ -109,9 +104,7 @@
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
 
-  // ตัวแปรเก็บข้อมูลจาก Cloud
   let cloudData = {};
-
   const calendarEl = document.getElementById('calendar');
   const noteBox = document.querySelector('.note-box');
   const noteDate = document.getElementById('note-date');
@@ -124,7 +117,7 @@
   const monthNames = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
   const days = ['อา','จ','อ','พ','พฤ','ศ','ส'];
 
-  // ฟังก์ชันดึงข้อมูลจาก Cloud ตลอดเวลา
+  // ดึงข้อมูลแบบเรียลไทม์
   onValue(ref(db, 'calendar_data/'), (snapshot) => {
     cloudData = snapshot.val() || {};
     renderCalendar(viewDate);
@@ -138,7 +131,6 @@
 
     calendarEl.innerHTML = '';
     currentMonthLabel.innerText = `${monthNames[month]} ${yearBE}`;
-    
     document.getElementById('month-selector').value = month;
     document.getElementById('year-selector').value = yearBE;
 
@@ -224,32 +216,6 @@
       notesListEl.appendChild(div);
     });
   }
-
-  // ฟังก์ชันย้ายข้อมูลจาก LocalStorage ขึ้น Cloud (ใช้ครั้งเดียว)
-  window.migrateData = async function() {
-    if (!confirm("ต้องการย้ายข้อมูล 6-7 เดือนจากเครื่องนี้ขึ้น Cloud ใช่ไหม?")) return;
-    
-    let count = 0;
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      const value = localStorage.getItem(key);
-      
-      // ตรวจสอบว่าชื่อ Key เป็นวันที่ (เช่น 2568-1-1) หรือไม่
-      if (key.match(/^\d{4}-\d{1,2}-\d{1,2}$/)) {
-        await update(ref(db, 'calendar_data/' + key), { note: value });
-        count++;
-      }
-      // ตรวจสอบสถานะสีแดง
-      if (key.endsWith('-selected')) {
-        const realKey = key.replace('-selected', '');
-        await update(ref(db, 'calendar_data/' + realKey), { selected: true });
-        count++;
-      }
-    }
-    alert(`ย้ายข้อมูลเสร็จสิ้นทั้งหมด ${count} รายการ! ตอนนี้เปิดดูในเครื่องอื่นได้เลยครับ`);
-    document.getElementById('sync-btn').style.display = 'none';
-  };
-
 </script>
 </body>
 </html>
